@@ -1,4 +1,4 @@
-name: Build APK
+name: Build APK with Full Debug Support
 
 on:
   push:
@@ -7,32 +7,58 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  ACTIONS_STEP_DEBUG: true
+  ACTIONS_RUNNER_DEBUG: true
+
 jobs:
   build:
     name: Build Debug APK
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      actions: write
+
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
+      - name: 📦 Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Grant execute permission to gradlew
+      - name: 🔓 Grant execute permission to gradlew
         run: chmod +x gradlew
 
-      - name: Build APK
-        run: ./gradlew assembleDebug
+      - name: 🧪 Build APK with debug output
+        run: |
+          echo "🔧 Bắt đầu build APK..."
+          set -x  # Hiện từng lệnh đang chạy
+          ./gradlew assembleDebug || {
+            echo "::error file=build.gradle::Lỗi khi build APK"
+            exit 1
+          }
 
-      - name: Upload APK
+      - name: 📤 Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: 🧹 Optional: Clean Gradle cache (disabled by default)
+        if: always()
+        run: |
+          echo "🧹 Dọn dẹp cache Gradle nếu cần"
+          # Nếu muốn xóa cache sau mỗi lần build, bỏ dấu # ở dòng dưới
+          # rm -rf ~/.gradle/caches
+
+      - name: 📋 Show workflow summary
+        if: always()
+        run: |
+          echo "::notice::✅ Workflow đã hoàn tất. Kiểm tra artifact để tải APK."

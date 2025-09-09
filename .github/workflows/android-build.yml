@@ -1,64 +1,79 @@
-name: Build APK with Full Debug Support
+name: Android CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
-  workflow_dispatch:
-
-env:
-  ACTIONS_STEP_DEBUG: true
-  ACTIONS_RUNNER_DEBUG: true
+    branches: [ "main" ]
 
 jobs:
   build:
-    name: Build Debug APK
+
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      actions: write
-
     steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
+    # 1. Checkout source code
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: ☕ Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+    # 2. Set up JDK
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
-      - name: 📦 Set up Android SDK
-        uses: android-actions/setup-android@v3
+    # 3. Make gradlew executable
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
 
-      - name: 🔓 Grant execute permission to gradlew
-        run: chmod +x gradlew
+    # 4. Build project
+    - name: Build with Gradle
+      run: ./gradlew build
 
-      - name: 🧪 Build APK with debug output
-        run: |
-          echo "🔧 Bắt đầu build APK..."
-          set -x  # Hiện từng lệnh đang chạy
-          ./gradlew assembleDebug || {
-            echo "::error file=build.gradle::Lỗi khi build APK"
-            exit 1
-          }
+    # 5. Run unit tests
+    - name: Run unit tests
+      run: ./gradlew test
 
-      - name: 📤 Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+    # 6. Upload test reports
+    - name: Upload test reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-report
+        path: app/build/test-results/
 
-      - name: 🧹 Optional: Clean Gradle cache (disabled by default)
-        if: always()
-        run: |
-          echo "🧹 Dọn dẹp cache Gradle nếu cần"
-          # Nếu muốn xóa cache sau mỗi lần build, bỏ dấu # ở dòng dưới
-          # rm -rf ~/.gradle/caches
+    # 7. Run lint check
+    - name: Run lint check
+      run: ./gradlew lint
 
-      - name: 📋 Show workflow summary
-        if: always()
-        run: |
-          echo "::notice::✅ Workflow đã hoàn tất. Kiểm tra artifact để tải APK."
+    # 8. Upload lint report
+    - name: Upload lint report
+      uses: actions/upload-artifact@v4
+      with:
+        name: lint-report
+        path: app/build/reports/lint-results.html
+
+    # 9. Upload APK and other build artifacts
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-artifacts
+        path: |
+          app/build/outputs/apk/
+          app/build/reports/
+
+    # 10. (Optional) Deploy placeholder
+    - name: Deploy (placeholder)
+      run: echo "Add Fastlane or deployment script here"
+      # chạy tùy chọn gỡ lỗi 
+    - name: Build with debug
+      run: ./gradlew build --debug
+     # xóa cache 
+    - name: Invalidate Gradle cache
+      uses: actions/cache@v3
+      with:
+       path: ~/.gradle/caches
+       key: gradle-cache-${{ runner.os }}-${{ github.run_id }}
+       restore-keys: gradle-cache-
+
+    

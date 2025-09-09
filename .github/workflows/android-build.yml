@@ -30,6 +30,12 @@ jobs:
     # 4. Build project
     - name: Build with Gradle
       run: ./gradlew build
+# lỗi 
+    - name: 🧪 Build APK with full warnings
+      run: echo "🔍 Build với chế độ cảnh báo đầy đủ..."
+      
+    - name: 🧪 Build APK with full warnings
+      run: ./gradlew assembleDebug --warning-mode all --stacktrace
 
     # 5. Run unit tests
     - name: Run unit tests
